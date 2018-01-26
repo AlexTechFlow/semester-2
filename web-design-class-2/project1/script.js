@@ -15,6 +15,19 @@ printNames(grades);
 printNames(mahBools);
 
 
+function add(a,b){ // this function need these parameters to work
+	var sum = a + b;
+	return sum; // need somebody to catch that return
+}
+
+var myCalculation = add(4,5); // this var catches the return-ed value from the function
+console.log(myCalculation);
+
+// or 
+
+console.log(add(3,7));
+
+
 // CLASS NOTES:
 
 // for loop for repeating things over and over again
