@@ -7,3 +7,5 @@ var limit = names.length; // DYNAMIC CODE example
 for (var i=0; i<limit; i ++){
 	console.log(names[i]);
 }
+
+// In HTML, common array elements could be list items, divs
