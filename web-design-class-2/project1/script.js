@@ -1,9 +1,9 @@
-var names = ["Joe", "Fraser", "Ali"];
+var names = ["Joe", "Fraser", "Ali", "Lisa", "UT"];
 
-var limit = 10;
+var limit = names.length; // DYNAMIC CODE example
 
 // for loop for repeating things over and over again
 // i<10; this line is for controling the loop
-for (var i=0; i<10; i ++){
-	console.log(i);
+for (var i=0; i<limit; i ++){
+	console.log(names[i]);
 }
