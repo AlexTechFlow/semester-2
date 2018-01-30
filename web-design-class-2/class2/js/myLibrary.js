@@ -28,6 +28,7 @@ var myLibrary = {
 
 
 
+
 /// EXERCISE IN-CLASS //
 // 1.
 //Create JavaScript function that:
@@ -38,6 +39,7 @@ var myLibrary = {
 // Outside of that function, create another function that:
 // accepts an array of books and
 // console.logs the titles of those books		
+
 
 
 
@@ -57,7 +59,7 @@ console.log(receivedBooks);
 function logTitles(bookArray){ // arrays and for loops go hand in hand
 	for(i=0; i<bookArray.length; i++){
 		console.log(i);
-		console.log(bookArray[i]);
+		console.log(bookArray[i].title);
 
 	}
 
@@ -74,20 +76,15 @@ logTitles(receivedBooks);
 // This is a reusable function because it is not tied to any specific library. You want to use the same function for different sets of data
 // ABSTRACT DATA FROM FUNCTIONALITY
 
-function logBookTitles(){};
-
 
 
 // Examples: input processing and output
-
 // function teach(courseName){
 // 	prepareStuff();
 // 	teachStuff();
 // 	gradeStuff();
-
 // 	return grades;
 // }
-
 // var gradesToDean = teach("IMM");
 
 
