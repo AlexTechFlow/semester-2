@@ -27,9 +27,12 @@ var myLibrary = {
 			};
 
 
+
+/// EXERCISE IN-CLASS //
 //Create JavaScript function that:
 // accepts a library object and 
 // returns an array of books
+
 // Outside of that function, create another function that:
 // accepts an array of books and
 // console.logs the titles of those books		
@@ -40,13 +43,27 @@ function getBooks(libraryObject){ // name function in reference to what it does
 	return libraryObject.books;
 }; 
 
-exercise1(libraryObject) {
-  return myLibrary.books;
-};	
+var receivedBooks = getBooks(myLibrary);
+console.log(receivedBooks);
 
-function exercise2();
+// NAMING OF FUNCTIONS AND VARS = WHAT THEY DO
+// NAMING IS IMPORTANT
 
-exercise2(){
+// This is a reusable function because it is not tied to any specific library. You want to use the same function for different sets of data
+// ABSTRACT DATA FROM FUNCTIONALITY
+
+function logBookTitles(){};
 
 
+
+// Examples: input processing and output
+
+function teach(courseName){
+	prepareStuff();
+	teachStuff();
+	gradeStuff();
+
+	return grades;
 }
+
+var gradesToDean = teach("IMM");
