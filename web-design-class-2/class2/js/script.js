@@ -23,10 +23,22 @@ o = {
 var lionJo = {
 	length:20,
 	wight:300,
-	fierceFactor:"VERY FIERCE"; // all thes are object properties 
-}
+	fierceFactor:"VERY FIERCE" // all thes are object properties 
+};
 
-var pride = [lionJo, lionPjil, lionDanZen];
+var pride = [lionJo];
 
 // USE ARRAYS FOR SETS OF THINGS
 // USE OBJECTS TO DESCRIBE THINGS
+
+
+// objects - use dot syntax to target elements of objects
+// array - use arrays syntax to target elements of arrays
+
+
+console.log(o);
+console.log(o.firstName);
+console.log(o.gamesPlayed);
+console.log(o.gamesPlayed[1]);
+console.log(o.address);
+console.log(o.address.postalCode);
