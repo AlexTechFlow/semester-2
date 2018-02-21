@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Gallery - ThreeJS</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+
+// https://github.com/mrdoob/three.js/tree/master/examples/js/controls
+// http://www.smartjava.org/content/all-109-examples-my-book-threejs-threejs-version-r63
+// https://github.com/josdirksen/learning-threejs
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+<script src="js/Detector.js"></script>
+<!--<script src="js/OrbitControls.js"></script>-->
+<script src="js/FirstPersonControls.js"></script>
+<script src="js/KeyboardState.js"></script>
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls;
+var keyboard = new KeyboardState();
+var clock = new THREE.Clock();
+
+
+// custom global variables
+var mesh;
+var logos = ["agencyzen.jpg", "altura.jpg", "chatnap.jpg", "danzen.jpg", "dark.jpg", "droner.jpg", "expo.jpg", "feathers.jpg", "garden.jpg", "gobstop.jpg", "gorgolon.jpg", "grimreaper.jpg", "hangy.jpg", "hipster.jpg", "kittytartan.jpg", "moodmystery.jpg", "motogami.jpg", "moustachemysteries.jpg", "museum.jpg", "opartica.jpg", "opartica2.jpg", "salamander.jpg", "saveearth.jpg", "spymail.jpg", "swoodle.jpg", "tapoll.jpg", "teleporters.jpg", "tilator.jpg", "tilty.jpg", "touchy.jpg", "tree.jpg", "trippy.jpg", "wannaget.jpg", "wavy.jpg", "webouija.jpg", "wordwarp.jpg", "yesumno.jpg", "zenmix.jpg", "zenmotto.jpg", "zenpass.jpg", "zenpicture.jpg", "zenplay.jpg"];
+var cards;
+
+
+init();
+animate();
+
+// FUNCTIONS 		
+function init() 
+{
+	// SCENE
+	scene = new THREE.Scene();
+	// add some fog so darkens in distance
+	scene.fog = new THREE.FogExp2( "black", 0.0025 );
+	
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 70, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 200000;
+	camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(0,10,0);
+	// controller will override below
+	// camera.lookAt(scene.position);
+	// camera.lookAt(new THREE.Vector3( 0, 15, 0 ))
+		
+	
+	// RENDERER
+	if (Detector.webgl)
+		renderer = new THREE.WebGLRenderer({antialias:true});
+	else
+		renderer = new THREE.CanvasRenderer(); 
+		
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById('ThreeJS');
+	container.appendChild(renderer.domElement);
+	
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({charCode : 'm'.charCodeAt(0)});
+	// stop various keys from moving the browser window
+	window.addEventListener("keydown", function(e) {
+		if (e.keyCode && (e.keyCode >= 32 && e.keyCode <= 40)) e.preventDefault(); 
+	});
+	
+	// adjust the speed of controller based on mouse position
+	// even go backwards a bit if at bottom of screen
+	// (could use right press but I find that a touch awkward)
+	var mouseX=300; var mouseY=300;
+	var winH = isNaN(window.innerHeight) ? window.clientHeight : window.innerHeight;
+	window.addEventListener("mousemove", function(e) {
+		if (!e) e = event;
+		mouseX = e.clientX;
+		mouseY = e.clientY;
+		// based on mouse height with a bit of reverse
+		controls.movementSpeed = (winH-mouseY)/5 - 40; 
+	});
+	
+	// CONTROLS
+
+	controls = new THREE.FirstPersonControls(camera, renderer.domElement);
+	controls.lookSpeed = 0.12;
+	controls.movementSpeed = 50;
+	controls.noFly = true;
+	controls.lookVertical = false;
+	controls.constrainVertical = true;
+	//controls.verticalMin = 1;
+	//controls.verticalMax = 2;
+	controls.lon = 180; 
+	//controls.lat = 120;
+	
+		
+	// LIGHT
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(100,250,100);
+	scene.add(light);
+	
+	// FLOOR
+	var loader = new THREE.TextureLoader();
+	var floorTexture = loader.load('tile.jpg');
+	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	floorTexture.repeat.set(1000, 1000);
+	var floorMaterial = new THREE.MeshBasicMaterial({map: floorTexture,transparent:true, opacity:0.2, side: THREE.DoubleSide});
+	var floorGeometry = new THREE.PlaneBufferGeometry(100000, 100000, 10, 10);
+	var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+	floor.position.y = -0.5;
+	floor.rotation.x = Math.PI / 2;
+	scene.add(floor);
+	
+	var skyBoxGeometry = new THREE.BoxGeometry(100000, 100000, 100000);
+	var skyBoxMaterial = new THREE.MeshBasicMaterial({color:"black", side:THREE.BackSide});
+	var skyBox = new THREE.Mesh(skyBoxGeometry, skyBoxMaterial);
+	scene.add(skyBox);
+	
+	////////////
+	// CUSTOM //
+	////////////
+	
+	var g;
+	var m;
+	var m2;
+	var t;
+	var t2
+	var logo;
+	var c;
+	
+	cards = [];
+	
+	for (var i=0; i< logos.length/2; i++) {
+		t = loader.load("logos/"+logos[i]);
+		m = new THREE.MeshBasicMaterial({map:t, side: THREE.FrontSide});
+		t2 = loader.load("logos/"+logos[i+logos.length/2]);
+		m2 = new THREE.MeshBasicMaterial({map:t2, side: THREE.FrontSide});
+		e = new THREE.MeshBasicMaterial({color: "#333", side: THREE.FrontSide})
+		g = new THREE.BoxGeometry(50, 50, 1); 
+		
+		// MATERIAL
+		// var material = new THREE.MeshBasicMaterial({color:0x00ff00}); 
+		// var material = new THREE.MeshNormalMaterial();
+		// create an array of materials to be used in a cube, one for each side
+		// if we put the camera inside then we want THREE.BackSide or THREE.DoubleSide (not THREE.FrontSide - default) 
+		c = [e,e,e,e,m,m2];
+		// order to add materials: x+,x-,y+,y-,z+,z-
+		var material = new THREE.MeshFaceMaterial(c);
+
+		mesh = new THREE.Mesh(g, material);
+		// mesh.position.set(0,25,-50-i*40); // line - now putting at positions below
+		
+		mesh.rotation.y = Math.random()*180/Math.PI;
+		
+		mesh.rotationSpeed = (.001 + Math.random()/1000) * ((Math.random()>.5)?1:-1);
+		console.log(mesh.rotationSpeed);
+		scene.add(mesh);
+		cards.push(mesh);
+	}
+	
+	var positions = [
+		0,0,1,0,0,
+		0,1,1,1,0,
+		1,1,1,1,1,
+		1,1,0,1,1,
+		1,1,1,1,1,
+		0,1,1,1,0,
+	]; 
+	
+	var cols=5; var count=0; var spacing=70;
+	for (i=0; i<positions.length; i++) {
+		if (positions[i]==0) continue;
+		cards[count].position.set(i%cols*spacing-3*spacing,25,Math.floor(i/cols)*spacing-3*spacing);
+		count++;
+	}
+	
+}
+
+var pause = false;
+
+function animate() {
+	
+    requestAnimationFrame(animate);
+	
+	keyboard.update();
+	if (keyboard.down("space")) {	  
+		pause = !pause;
+	}	
+	
+	var delta = clock.getDelta();
+	
+	if (!pause) {
+		// this controller needs delta time passed in as parameter
+		controls.update(delta);
+		
+		// rotate the cards their random rotation speed (assigned on creation)
+		for (var i=0; i<cards.length; i++) {
+			cards[i].rotation.y += cards[i].rotationSpeed;	
+		}
+	}
+	renderer.render(scene,camera);
+	
+}
+
+
+</script>
+
+</body>
+</html>

@@ -25,8 +25,19 @@ for(var i=0; i<nodeList.length; i++){
 
 
 
-//returns the first node that matches the selector
-var node = document.querySelector(selectors);
 
-//Returns a list of nodes that match the specified group of selectors
-var nodeList = document.querySelectorAll(li); // this can be ANY VALID CSS SELECTOR -- very convenient
+//creates a new  element node 
+var newElement = document.createElement("li");
+//<li></li>
+
+//creates a new  text node
+var textNode = document.createTextNode("Brand new textnode"); 
+
+//appends the node to the parent as its last child
+newElement.appendChild(textNode); 
+//<li>Brand new textnode</li>
+
+//append the new list item to the list on the page
+var mainList = document.getElementById("main");
+
+mainList.appendChild(newElement);

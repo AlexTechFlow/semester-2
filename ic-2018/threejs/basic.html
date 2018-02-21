@@ -1,0 +1,104 @@
+<html> 
+<head> 
+<meta charset="utf-8" />
+<title>ThreeJS Simple Template</title> 
+<style> 
+	body {margin:0px;} 
+	canvas {width:100%; height:100%} 
+</style>
+</head> 
+<body>
+<!-- 3D libraries -->
+<script src="js/Three.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/r73/three.min.js"></script>
+<script src="js/THREEx.FullScreen.js"></script>  <!-- bringing these 3 from template2.html file -->
+<script src="js/THREEx.WindowResize.js"></script>
+<script src="js/OrbitControls.js"></script> <!-- This is a module -->
+
+
+<script> 
+
+	// SCENE
+	var scene = new THREE.Scene(); // THREE is a namespacwe for Three.js; and here we are accessing a scene which is a Class;
+	// Scene is kind ogf like a stage. We bring things to it;
+	
+
+	// CAMERA
+	var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+	camera.position.z = 0; // 0 camera inside the box, 500 five times away from box if box is 100; 
+	// z means going inside the screen space
+	
+	// RENDERER
+	var renderer = new THREE.WebGLRenderer({antialias:true}); 
+	renderer.setSize(window.innerWidth, window.innerHeight); 
+	document.body.appendChild(renderer.domElement);
+
+
+	// EVENTS // copied from template 2
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({charCode : 'm'.charCodeAt(0)});
+	
+	// CONTROLS // copied from template 2
+	controls = new THREE.OrbitControls(camera, renderer.domElement);
+	
+
+
+	// GEOMETRY
+
+	var geom = new THREE.BoxGeometry(100,100,100); // evgerything is centerReg, we are sitting so close we can't see anything, with camera.z = 10. We are inside the box, so we can't see our box. Change z to 500 to see the box we are creating. 
+	// 0 0 is the point in the middle of the space;
+	
+
+
+	// MATERIAL
+	
+	var mat = new THREE.MeshNormalMaterial({side:THREE.DoubleSide}); // ity gets its own color automatically
+	//var mat = new THREE.MeshPhongMaterial();
+	// var mat = new THREE.MeshLambertMaterial({color:0xCC0000}); // Lambert allows us to add color material to it
+	// now the shape is gone. why? because this one requires a LIGHT!
+		
+
+
+	// MESH
+	
+	var box = new THREE.Mesh(geom, mat); // but we won't see it because we haven't added it to the "stage"
+	// box.rotation.y = 45 * Math.PI/180; // rotate 45 degrees around y axis; PI is a constannt sored on the Math object;
+	// box.position.x = 200;
+
+	scene.add(box);
+
+
+	
+	// LIGHT
+
+	var light = new THREE.PointLight(0xffffff); // color white in HEX, 0x is the same as the #;
+	// the default color is black, thats why we don;t see abnything yet;
+	//GOTTA ADD THE LIGHT TO THE SCENE!
+	light.position.set(100,250,100); // x,y,z
+	scene.add(light);
+
+
+	
+	// CONTROLS
+	var controls = new THREE.OrbitControls(camera, renderer.domElement);
+	
+	
+
+
+	// ANIMATION
+	function render() {
+		// animate mesh or camera (or lights)
+		box.rotation.y += .01;
+		//box.rotation.x += .01;
+		
+		controls.update();
+		requestAnimationFrame(render); // call function as soon as computer is ready to draw, it is like  a ZIM ticker
+		renderer.render(scene, camera); 
+	} 
+	render();
+
+	//zim zap zimjs.com/zap/3DBasics/192406
+
+</script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Path</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link rel=stylesheet href="css/base.css"/>
+</head>
+<body>
+
+<script src="http://d309knd7es5f10.cloudfront.net/zim_1.3.js"></script>
+
+<script src="js/Three.js"></script>
+<script src="js/Detector.js"></script>
+<script src="js/Stats.js"></script>
+<script src="js/OrbitControls.js"></script>
+<!--<script src="js/THREEx.KeyboardState.js"></script>-->
+<script src="js/THREEx.FullScreen.js"></script>
+<script src="js/THREEx.WindowResize.js"></script>
+
+<!-- ------------------------------------------------------------ -->
+
+<div id="ThreeJS" style="position: absolute; left:0px; top:0px"></div>
+<script>
+
+	// direct player with left / right arrows
+	// move faster forward with up arrow and slower with down arrow
+	// as player moves a path is made with a plane
+	// use E key to elevate and F key to fall
+	
+	// started off with absolute control - which is pretty easy - just move in arrow direction
+	// but wanted a left right turn guidance system which is more natural
+	// so called this a relative guidance
+	
+	// also wanted to be able to look around as I go although not all the way around
+	// for that you have to turn	
+	// added easing to the looking (which also handled easing on the turning)
+	
+	// there are controls available like first person controls
+	// I was just a little unsure how to handle the adding of the path at the same time
+	// so I made my own controls
+	
+	// MOVEMENT
+	// to handle relative controls you make a lookup table
+	// as you turn, you advance an index that pulls from the lookup table
+	// these lookup values then get used in equations for movement
+	// to disable parts of the equations when they are 0 or make them negative if -1, etc.
+	// the modulus % handles wrapping around the lookup table
+	// it gives the remainder so as rotation increases an index it looks like this:
+	// index	0 1 2 3 4 5 6 7 8 9
+	// modulus	0 1 2 3 0 1 2 3 0 1
+	
+	// PLANES
+	// we also are leaving planes (surfaces) behind us as we go
+	// these are organized in a grid so we could later recreate and so we do not make more than we need
+	// the grid is stored in an array of rows, each row having an array of columns (or maybe the other way around)
+	// we turn on a 1 for if there is a plane in that position and 0 for no plane
+	
+	// MORE
+	// we could make this multiuser and have a game like TRON Light Cycles
+	// or a laberynth type game
+	// or a collecting game or dodging game
+	// we could draw with this type of arrangement
+	// we could have multiple levels of planes
+	// we could save them and share them, etc.
+	
+	var moveX = 0; 
+	var moveZ = 400;
+	var moveY = 200; 
+	var animateCheck = true;
+	var directions = [1,0,-1,0];
+	var iX = 1;
+	var iZ = 2;
+	var directionX = directions[iX]; 
+	var directionZ = directions[iZ]; // N
+	var speed = .2;
+	var maxSpeed = 5;
+	var maxElevation = 10000;
+	
+	var squareSize = 100;
+	var size = 100000;
+	var num = Math.round(size/squareSize);
+	var tiles = [];
+	
+	initSquares();
+	function initSquares() {
+		for (var i=0; i<num; i++) {
+			tiles[i] = [];
+			for (var j=0; j<num; j++) {
+				tiles[i][j] = 0;
+			}
+		}
+	}
+	
+	window.addEventListener("keydown", function(e) {
+		if (!e) e = event;
+		zog(e.keyCode);
+		
+		// pre damping
+		// if (e.keyCode == 32) animateCheck = !animateCheck; // spacebar
+		
+		if (e.keyCode == 32) speed = 0; // handles damping
+		
+		/*
+		// ABSOLUTE guidance (always forward)
+		// east==left, north==up, west==right, south==down
+		if (e.keyCode == 37) {directionX = -1; directionZ = 0; animateCheck=true;}  // left
+		if (e.keyCode == 38) {directionX = 0;  directionZ = -1; animateCheck=true;} // up
+		if (e.keyCode == 39) {directionX = +1; directionZ = 0; animateCheck=true;}  // right
+		if (e.keyCode == 40) {directionX = 0;  directionZ = +1; animateCheck=true;} // down
+		*/
+		
+		// RELATIVE guidance - left/right are turn, up is forward, down is backwards	
+		// stagger X and Z then cycle each through directions 
+		// forward and backwards through the list
+		if (e.keyCode == 37) {iX += 1; iZ += 1; animateCheck=true;}  // left
+		if (e.keyCode == 39) {iX -= 1; iZ -= 1; animateCheck=true;}  // right
+		// % is the modulus (remainder)
+		// but it can go negative so make it always positive by adding 4
+		iX = (iX + 4) % 4; iZ = (iZ + 4) % 4;		
+		directionX = directions[iX];
+		directionZ = directions[iZ];	
+		
+		if (e.keyCode == 38) {speed += .1; speed = Math.min(speed, maxSpeed);} // up
+		if (e.keyCode == 40) {speed -= .1; speed = Math.max(speed, -maxSpeed);} // down
+		
+		// change height of camera E (elevate) F (fall) - whatever
+		if (e.keyCode == 69) {moveY += 5; moveY = Math.min(moveY, maxElevation);} // up
+		if (e.keyCode == 70) {moveY -= 5; moveY = Math.max(moveY, -maxElevation);} // down
+		
+		
+		/* 
+		// if changing speed with numbers	
+		// positive speed if forward / negative speed if backwards
+		if (e.keyCode == 38) {speed = Math.abs(speed);} // up
+		if (e.keyCode == 40) {speed = -Math.abs(speed);} // down
+
+		// change the speed with numbers
+		if (e.keyCode >= 48 && e.keyCode <= 57){
+			speed = (e.keyCode-48)/10;
+		}
+		*/
+		
+		// stops certain keys from moving canvas
+		if (e.keyCode && (e.keyCode >= 32 && e.keyCode <= 40)) e.preventDefault(); 
+	});
+	
+	// stop stage from moving around
+	var b = function(e) {if (!e) e = event; e.preventDefault();}
+	var c = b;
+	window.addEventListener("mousewheel", b);
+	window.addEventListener("DOMMouseScroll", c);
+		
+	
+	var stageW = zim.windowWidth();
+	var stageH = zim.windowHeight();
+	window.addEventListener("resize", function(e) {
+		if (!e) e = event;
+		stageW = zim.windowWidth();
+		stageH = zim.windowHeight();
+	});
+	
+	var mouseX=stageW/2; var mouseY=stageH/2;
+	window.addEventListener("mousemove", function(e) {
+		if (!e) e = event;
+		mouseX = e.clientX;
+		mouseY = e.clientY;
+	});
+	
+	var dampX = new zim.Damp();
+	var dampZ = new zim.Damp();
+	var dampY = new zim.Damp();
+	var dampS = new zim.Damp(speed, .05);
+	
+	function doAnimate() {
+		
+		var lookLR = (mouseX-stageW/2);
+		var lookUD = (stageH-mouseY);
+		
+		// pre damping
+		/*
+		if (animateCheck) {
+			moveX += speed*directionX;
+			moveZ += speed*directionZ;
+			camera.position.set(moveX,100,moveZ);
+		}
+		*/
+		
+		var newSpeed = dampS.convert(speed);
+		moveX += newSpeed*directionX;
+		moveZ += newSpeed*directionZ;
+		camera.position.set(moveX, dampY.convert(moveY), moveZ);
+		skyBox.position.set(moveX, 0, moveZ);
+	
+		//camera.lookAt(scene.position);
+		
+		/*
+		// with if statement
+		if (directionZ == 0) {
+			camera.lookAt(new THREE.Vector3(moveX+lookUD*directionX, 0, moveZ+lookLR*directionX));
+		} else if (directionX == 0) {
+			camera.lookAt(new THREE.Vector3(moveX-lookLR*directionZ, 0, moveZ+lookUD*directionZ));
+		}
+		*/
+
+		/*
+		// without if statement - no damping
+		camera.lookAt(new THREE.Vector3(			
+			moveX + lookUD*directionX - lookLR*directionZ, 
+			0, 
+			moveZ + lookLR*directionX + lookUD*directionZ			
+		));
+		*/
+		
+		// with damping
+		camera.lookAt(new THREE.Vector3(			
+			dampX.convert(moveX + lookUD*directionX*5 - lookLR*directionZ), 
+			0, 
+			dampZ.convert(moveZ + lookLR*directionX + lookUD*directionZ*5)			
+		));
+		
+		leaveSquare();
+			
+		
+	}
+	
+	
+
+	
+	function leaveSquare() {
+		
+		// imagine a virtual grid of squareSize tiles that we turn on as we rollover
+		// tiles = [[0,0,0,1],[1,0,0,1],[1,1,1,1],[0,0,0,0]]; // 4 x 4 - we are 1000 x 1000
+		// zog(Math.round(moveX+num/2),Math.round(moveZ+num/2));
+		if (tiles[Math.round(moveX/squareSize+num/2)][Math.round(moveZ/squareSize+num/2)] == 0) {
+			tiles[Math.round(moveX/squareSize+num/2)][Math.round(moveZ/squareSize+num/2)] = 1;
+			// make a plane
+			var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+			plane.position.y = 100;
+			plane.rotation.x = Math.PI / 2; 
+			// zim.decimals(moveX, -2); // would round to nearest 100 - but squareSize might not always be 100
+			// put planes in grid
+			plane.position.x = Math.round(moveX/squareSize)*squareSize;
+			plane.position.z = Math.round(moveZ/squareSize)*squareSize;
+			scene.add(plane);
+		
+		}
+			
+		
+	}
+	
+
+// MAIN
+
+// standard global variables
+var container, scene, camera, renderer, controls, stats;
+// var keyboard = new KeyboardState();
+// var keyboard = new THREEx.KeyboardState();
+//var clock = new THREE.Clock();
+
+// custom global variables
+var mesh; var planeMaterial; var planeGeometry; var skyBox;
+
+init();
+animate();
+
+// FUNCTIONS 		
+function init() {
+	// SCENE
+	scene = new THREE.Scene();
+	
+	// CAMERA
+	var SCREEN_WIDTH = window.innerWidth, SCREEN_HEIGHT = window.innerHeight;
+	var VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = size*2;
+	camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
+	scene.add(camera);
+	camera.position.set(0,150,400);
+	camera.lookAt(scene.position);	
+	
+	// RENDERER
+	if ( Detector.webgl )
+		renderer = new THREE.WebGLRenderer({antialias:true});
+	else
+		renderer = new THREE.CanvasRenderer(); 
+	renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+	container = document.getElementById('ThreeJS');
+	container.appendChild(renderer.domElement);
+	
+	// EVENTS
+	THREEx.WindowResize(renderer, camera);
+	THREEx.FullScreen.bindKey({charCode : 'm'.charCodeAt(0)});
+	
+	// CONTROLS
+	// controls = new THREE.OrbitControls( camera, renderer.domElement );
+	
+	// STATS
+	stats = new Stats();
+	stats.domElement.style.position = 'absolute';
+	stats.domElement.style.bottom = '0px';
+	stats.domElement.style.zIndex = 100;
+	container.appendChild(stats.domElement);
+	
+	// LIGHT
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(100,250,100);
+	scene.add(light);
+	
+	// FLOOR
+	var floorTexture = new THREE.ImageUtils.loadTexture('images/tile.jpg');
+	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	floorTexture.repeat.set(1000, 1000);
+	var floorMaterial = new THREE.MeshBasicMaterial({map: floorTexture, side: THREE.DoubleSide});
+	var floorGeometry = new THREE.PlaneGeometry(size, size, 10, 10);
+	var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+	floor.position.y = -0.5;
+	floor.rotation.x = Math.PI / 2;
+	scene.add(floor);
+	
+	// SKYBOX	
+	// Create an array of materials to be used in a cube, one for each side
+	var cubeMaterialArray = [];
+	// order to add materials: x+,x-,y+,y-,z+,z-
+	var starTexture = new THREE.ImageUtils.loadTexture('images/stars.jpg');
+	var moonTexture = new THREE.ImageUtils.loadTexture('images/moon.jpg');
+	cubeMaterialArray.push( new THREE.MeshBasicMaterial( {map: starTexture, side: THREE.BackSide } ) );
+	cubeMaterialArray.push( new THREE.MeshBasicMaterial( {map: starTexture, side: THREE.BackSide } ) );
+	cubeMaterialArray.push( new THREE.MeshBasicMaterial( {map: starTexture, side: THREE.BackSide } ) );
+	cubeMaterialArray.push( new THREE.MeshBasicMaterial( {map: starTexture, side: THREE.BackSide } ) );
+	cubeMaterialArray.push( new THREE.MeshBasicMaterial( {map: starTexture, side: THREE.BackSide } ) );
+	cubeMaterialArray.push( new THREE.MeshBasicMaterial( {map: moonTexture, side: THREE.BackSide } ) );
+	var cubeMaterials = new THREE.MeshFaceMaterial(cubeMaterialArray);
+	
+	var skyBoxGeometry = new THREE.CubeGeometry(size, size/2, size);
+	//var skyBoxMaterial = new THREE.MeshBasicMaterial({color: 0x9999ff, side: THREE.BackSide});
+	skyBox = new THREE.Mesh(skyBoxGeometry, cubeMaterials);
+	scene.add(skyBox);
+	
+	////////////
+	// CUSTOM //
+	////////////
+	
+	
+	var geometry = new THREE.SphereGeometry(30, 32, 16);
+	var material = new THREE.MeshLambertMaterial({color: 0xCC0000});
+	mesh = new THREE.Mesh(geometry, material);
+	mesh.position.set(zim.rand(-10000,10000), 40, zim.rand(-10000,10000));
+	scene.add(mesh);
+	
+	planeMaterial = new THREE.MeshBasicMaterial({color:0xFFFFFF, transparent:true, opacity:0.5, side:THREE.DoubleSide});
+	planeGeometry = new THREE.PlaneGeometry(100, 100, 1, 1);
+	// var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+	// scene.add(plane);
+	// add the planes in the doAnimate()
+	
+}
+
+
+function animate() {
+	
+    requestAnimationFrame(animate);
+	
+	//camera.position.set(move++,move++,move++);
+	//camera.lookAt(scene.position);
+	
+	doAnimate();
+	stats.update()
+	renderer.render(scene, camera);	
+	
+}
+
+</script>
+
+</body>
+</html>
